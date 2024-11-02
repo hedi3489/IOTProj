@@ -13,20 +13,32 @@
   <body>
     <h1>IoT Dashboard</h1>
 
-    <div class="dashboard">
-      <p>Lights</p>
-      
-      <img id="lightbulb" src="../static/lightoff.png" alt="Lightbulb Off" />
-
-      <div class="switch">
-        <input type="checkbox" id="switchButton" onchange="toggleSwitch()" />
-        <label for="switchButton"></label>
+    <div class="dashboard-container">
+      <!----------- Light Widget ----------->
+      <div class="dashboard">
+        <p>Lights</p>      
+        <img id="lightbulb" src="../static/lightoff.png" alt="Lightbulb Off" />
+        <div class="switch">
+          <input type="checkbox" id="switchButton" onchange="toggleSwitch()" />
+          <label for="switchButton"></label>
+        </div>
       </div>
 
+      <!----------- Fan Widget -----------> 
+      <div class="dashboard">
+        <p>Fan</p>      
+        <img id="fan" src="../static/fanoff.png" alt="Fan Off" />
+        <div class="switch">
+          <input type="checkbox" id="fanSwitchButton" onchange="toggleFan()" />
+          <label for="fanSwitchButton"></label>
+        </div>
+      </div>
     </div>
+
 
     <script>
       let switchState = false
+      let fanSwitchState = false
       
       function toggleSwitch() {
         switchState = !switchState
@@ -48,6 +60,28 @@
           body: JSON.stringify({ state: switchState })
         })
       }
+
+      function toggleFan() {
+        fanSwitchState = !fanSwitchState;
+        const fanImage = document.getElementById('fan');
+
+        // Update fan image based on switch state
+        if (fanSwitchState) {
+          fanImage.src = '../static/fanon.png';
+        } else {
+          fanImage.src = '../static/fanoff.png';
+        }
+
+        // Send data to the server to control the fan
+        fetch('/toggle-fan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ state: fanSwitchState })
+        });
+      }
+
     </script>
   </body>
 </html>

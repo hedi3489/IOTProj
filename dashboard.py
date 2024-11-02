@@ -33,6 +33,8 @@ GPIO.setwarnings(False)
 GPIO.setup(ENA, GPIO.OUT)
 GPIO.setup(IN1, GPIO.OUT)
 GPIO.setup(IN2, GPIO.OUT)
+fan_state = False  # Initial fan state
+
 
 @app.route('/')
 def dashboard():
@@ -58,6 +60,31 @@ def toggle_led():
         led_state = False #Update led_state to follow that LED is now off
 
     return jsonify({'success': True, 'led_state': led_state}) # keep this line to indicate that the script passed and the led is turned on or off successfully, otherwise return False and include the current LED state in the response
+
+
+# Toggling Fan
+@app.route('/toggle-fan', methods=['POST'])
+def toggle_fan():
+    # fan control
+    global fan_state
+
+    data = request.get_json()
+    # Parse JSON data
+    switch_state = data['state']  # Get the state value
+
+    if switch_state:
+        # Turn on fan
+        GPIO.output(IN1, GPIO.HIGH)  # Set IN1 high to activate fan
+        GPIO.output(IN2, GPIO.LOW)    # Set IN2 low for desired direction
+        GPIO.output(ENA, GPIO.HIGH)   # Enable fan
+        fan_state = True  # Update fan_state to indicate fan is on
+    else:
+        # Turn off fan
+        GPIO.output(ENA, GPIO.LOW)    # Disable fan
+        fan_state = False  # Update fan_state to indicate fan is off
+
+    return jsonify({'success': True, 'fan_state': fan_state})  # Indicate success and return current fan state
+
 
 # Data capture route for reading DHT11 sensor
 @app.route('/read-sensor', methods=['GET'])

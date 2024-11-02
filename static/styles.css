@@ -15,6 +15,11 @@ h1 {
     padding: 30px 0px 30px 50px;
 }
 
+.dashboard-container {
+    display: flex;
+    margin: 20px; 
+}
+
 .dashboard {
     width: 220px;
     height: 240px;
@@ -69,5 +74,10 @@ h1 {
 
 #lightbulb {
     width: 100px;
+    height: 130px;
+}
+
+#fan {
+    width: 130px;
     height: 130px;
 }

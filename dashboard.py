@@ -74,13 +74,11 @@ def toggle_fan():
 
     if switch_state:
         # Turn on fan
-        GPIO.output(IN1, GPIO.HIGH)  # Set IN1 high to activate fan
-        GPIO.output(IN2, GPIO.LOW)    # Set IN2 low for desired direction
-        GPIO.output(ENA, GPIO.HIGH)   # Enable fan
+        turn_motor_on()
         fan_state = True  # Update fan_state to indicate fan is on
     else:
         # Turn off fan
-        GPIO.output(ENA, GPIO.LOW)    # Disable fan
+        turn_motor_off()
         fan_state = False  # Update fan_state to indicate fan is off
 
     return jsonify({'success': True, 'fan_state': fan_state})  # Indicate success and return current fan state

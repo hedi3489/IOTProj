@@ -6,6 +6,7 @@ import time
 import imaplib
 import email
 from email.header import decode_header
+import threading
 
 app = Flask(__name__)
 
@@ -148,40 +149,30 @@ def receive_emails():
         try:
             mail.login(MAIL, PSWD)
             mail.select("inbox")
-            # Search for emails with the subject "Temperature Alert"
-            status, data = mail.search(None, '(SUBJECT "Temperature Alert")')
-
-            # Get the list of email IDs matching the search
-            email_ids = data[0].split()
+            status, data = mail.search(None, '(SUBJECT "Temperature Alert")') # Search for emails with the subject "Temperature Alert"
+            email_ids = data[0].split() # Get the list of email IDs matching the search
             if email_ids:
                 # Fetch the latest "Temperature Alert" email
                 latest_email_id = email_ids[-1]
                 status, msg_data = mail.fetch(latest_email_id, '(RFC822)')
-
                 for response_part in msg_data:
                     if isinstance(response_part, tuple):
                         msg = email.message_from_bytes(response_part[1])
-
-                        # Decode email subject to confirm it's "Temperature Alert"
                         subject, encoding = decode_header(msg['Subject'])[0]
                         if isinstance(subject, bytes):
                             subject = subject.decode(encoding if encoding else 'utf-8')
 
                         print(f"Subject: {subject}")
-
                         # Check if the email is multipart
                         if msg.is_multipart():
                             for part in msg.walk():
                                 content_type = part.get_content_type()
                                 content_disposition = str(part.get('Content-Disposition'))
-
-                                # Get the email body
                                 if 'attachment' not in content_disposition:
                                     body = part.get_payload(decode=True)
                                     if body:
                                         body = body.decode()  # Decode to string
                                         print(f"Body: {body}")
-
                                         # Check for 'Y' in the body
                                         if 'Y' in body:
                                             turn_motor_on()
@@ -193,16 +184,13 @@ def receive_emails():
                             if body:
                                 body = body.decode()
                                 print(f"Body: {body}")
-
                                 # Check for 'Y' in the body
                                 if 'Y' in body:
                                     turn_motor_on()
                                 elif 'n' in body:
                                     turn_motor_off()
-
             else:
                 print("No 'Temperature Alert' emails found.")
-
         except Exception as e:
             print(f"Failed to receive emails: {e}")
         finally:
@@ -211,12 +199,18 @@ def receive_emails():
 
 ############################################################################################
 
+# Function to read sensor and start a separate thread
+def read_sensor_thread():
+    while True:
+        read_sensor()
+        time.sleep(60)
 
 # Function to turn the motor ON
 def turn_motor_on():
     GPIO.output(ENA, GPIO.HIGH)  # Enable the motor
     GPIO.output(IN1, GPIO.LOW)   # Set direction
     GPIO.output(IN2, GPIO.HIGH)  # Set direction
+    fan_state = True
     print("Fan is ON")
 
 # Function to turn the motor OFF
@@ -224,7 +218,16 @@ def turn_motor_off():
     GPIO.output(ENA, GPIO.LOW)   # Disable the motor
     GPIO.output(IN1, GPIO.HIGH)  # Set to stop
     GPIO.output(IN2, GPIO.LOW)   # Set to stop
+    fan_state = False
     print("Fan is OFF")
 
+def cleanup():
+    GPIO.cleanup()
+    print("GPIO cleanup done")
+
 if __name__ == "__main__":
-    app.run(port=5001)
+    try:
+        threading.Thread(target=read_sensor_thread, daemon=True).start()
+        app.run(port=5001)
+    except KeyboardInterrupt:
+        cleanup()

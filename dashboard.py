@@ -10,7 +10,6 @@ import threading
 
 app = Flask(__name__)
 
-
 # LED setup
 LED_PIN = 18
 GPIO.setmode(GPIO.BCM)
@@ -19,11 +18,9 @@ GPIO.setup(LED_PIN, GPIO.OUT)
 led_state = False
 GPIO.output(LED_PIN, GPIO.LOW)
 
-
 # DHT11 sensor setup
 DHT_PIN = 16
 dht_sensor = DHT(DHT_PIN)
-
 
 # Motor setup
 ENA = 22  # Enable Pin
@@ -36,31 +33,25 @@ GPIO.setup(IN1, GPIO.OUT)
 GPIO.setup(IN2, GPIO.OUT)
 fan_state = False  # Initial fan state
 
-
 @app.route('/')
 def dashboard():
     GPIO.output(LED_PIN, GPIO.LOW)
     return render_template('index.html')
 
-
-## TODO: implement the logic for the led turning on
+# TODO: implement the logic for the led turning on
 @app.route('/toggle-led', methods=['POST'])
 def toggle_led():
-    #get current LED status
+    # get current LED status
     global led_state
 
     data = request.get_json()
-    #parse json data
-    switch_state = data['state'] #Get the state value
+    # parse json data
+    switch_state = data['state']  # Get the state value
 
-    if switch_state:
-        GPIO.output(LED_PIN, GPIO.HIGH) #Turn on LED if switch state is true
-        led_state = True #Update led_state to follow that LED is now on
-    else:
-        GPIO.output(LED_PIN, GPIO.LOW) #Turn off LED if switch state is false
-        led_state = False #Update led_state to follow that LED is now off
+    GPIO.output(LED_PIN, GPIO.HIGH if switch_state else GPIO.LOW)  # Toggle LED
+    led_state = switch_state  # Update led_state
 
-    return jsonify({'success': True, 'led_state': led_state}) # keep this line to indicate that the script passed and the led is turned on or off successfully, otherwise return False and include the current LED state in the response
+    return jsonify({'success': True, 'led_state': led_state})  # Indicate success and return current LED state
 
 
 # Toggling Fan
@@ -74,24 +65,19 @@ def toggle_fan():
     switch_state = data['state']  # Get the state value
 
     if switch_state:
-        # Turn on fan
-        turn_motor_on()
-        fan_state = True  # Update fan_state to indicate fan is on
+        turn_motor_on()  # Turn on fan
     else:
-        # Turn off fan
-        turn_motor_off()
-        fan_state = False  # Update fan_state to indicate fan is off
+        turn_motor_off()  # Turn off fan
 
+    fan_state = switch_state  # Update fan_state
     return jsonify({'success': True, 'fan_state': fan_state})  # Indicate success and return current fan state
 
 
 # Data capture route for reading DHT11 sensor
-# Separate function for single sensor reading requested by the dashboard
 @app.route('/read-sensor', methods=['GET'])
 def read_sensor_once():
     for _ in range(15):  # Attempt to read sensor up to 15 times
-        chk = dht_sensor.readDHT11()
-        if chk == 0:
+        if dht_sensor.readDHT11() == 0:  # Only proceed if read is successful
             humidity = dht_sensor.getHumidity()
             temperature = dht_sensor.getTemperature()
             return jsonify({'temperature': temperature, 'humidity': humidity})
@@ -102,14 +88,11 @@ def read_sensor_once():
 
 # Function to send email
 def send_email(current_temp):
-    sender_email = "belhassinehedi308@gmail.com"
-    receiver_email = "belhassinehedi308@gmail.com"
-    password = "mdmk palo kswz vyvj"
-    yag = yagmail.SMTP(user=sender_email, password=password)
+    yag = yagmail.SMTP(user="belhassinehedi308@gmail.com", password="mdmk palo kswz vyvj")
 
     subject = "Temperature Alert"
     body = f"The current temperature is {current_temp}. Would you like to turn on the fan?"
-    yag.send(to=receiver_email, subject=subject, contents=body)
+    yag.send(to="belhassinehedi308@gmail.com", subject=subject, contents=body)
     print("Sent!")
     receive_emails()
 
@@ -119,20 +102,18 @@ def check_email_response():
     while True:
         time.sleep(60)  # Check every minute
         try:
-            # Only fetch unread emails
-            inbox = yag.get_inbox(search_expression='UNSEEN')
+            inbox = yag.get_inbox(search_expression='UNSEEN')  # Fetch unread emails
 
             for email in inbox:
-                if 'Temperature Alert' in email.subject :
+                if 'Temperature Alert' in email.subject:
                     if 'Y' in email.body:
-                        print("Y recieved")
+                        print("Y received")
                         turn_motor_on()
                     return  # Exit after handling the response
         except Exception as e:
             print(f"Error checking email: {e}")
 
 
-####################################################################################################
 def receive_emails():
     # Email configuration
     SRVR = 'imap.gmail.com'
@@ -147,11 +128,10 @@ def receive_emails():
         try:
             mail.login(MAIL, PSWD)
             mail.select("inbox")
-            status, data = mail.search(None, '(SUBJECT "Temperature Alert")') # Search for emails with the subject "Temperature Alert"
-            email_ids = data[0].split() # Get the list of email IDs matching the search
+            status, data = mail.search(None, '(SUBJECT "Temperature Alert")')  # Search for emails with the subject "Temperature Alert"
+            email_ids = data[0].split()  # Get the list of email IDs matching the search
             if email_ids:
-                # Fetch the latest "Temperature Alert" email
-                latest_email_id = email_ids[-1]
+                latest_email_id = email_ids[-1]  # Fetch the latest "Temperature Alert" email
                 status, msg_data = mail.fetch(latest_email_id, '(RFC822)')
                 for response_part in msg_data:
                     if isinstance(response_part, tuple):
@@ -192,18 +172,13 @@ def receive_emails():
         except Exception as e:
             print(f"Failed to receive emails: {e}")
         finally:
-            # Logout and close the connection
-            mail.logout()
-
-############################################################################################
+            mail.logout()  # Logout and close the connection
 
 # Function to read sensor and start a separate thread
-# Function for continuous sensor monitoring in a background thread
 def read_sensor_thread():
     while True:
         for _ in range(15):  # Attempt to read sensor up to 15 times
-            chk = dht_sensor.readDHT11()
-            if chk == 0:
+            if dht_sensor.readDHT11() == 0:  # Only proceed if read is successful
                 humidity = dht_sensor.getHumidity()
                 temperature = dht_sensor.getTemperature()
 
@@ -215,12 +190,12 @@ def read_sensor_thread():
 
         time.sleep(60)  # Wait 1 minute before the next reading
 
-
 # Function to turn the motor ON
 def turn_motor_on():
     GPIO.output(ENA, GPIO.HIGH)  # Enable the motor
     GPIO.output(IN1, GPIO.LOW)   # Set direction
     GPIO.output(IN2, GPIO.HIGH)  # Set direction
+    global fan_state
     fan_state = True
     print("Fan is ON")
 
@@ -229,6 +204,7 @@ def turn_motor_off():
     GPIO.output(ENA, GPIO.LOW)   # Disable the motor
     GPIO.output(IN1, GPIO.HIGH)  # Set to stop
     GPIO.output(IN2, GPIO.LOW)   # Set to stop
+    global fan_state
     fan_state = False
     print("Fan is OFF")
 

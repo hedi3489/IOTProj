@@ -73,6 +73,11 @@ def toggle_fan():
     return jsonify({'success': True, 'fan_state': fan_state})  # Indicate success and return current fan state
 
 
+@app.route('/fan-state', methods=['GET'])
+def get_fan_state():
+    global fan_state
+    return jsonify({'fan_state': fan_state})  # Return the current fan state
+
 # Data capture route for reading DHT11 sensor
 @app.route('/read-sensor', methods=['GET'])
 def read_sensor_once():

@@ -38,21 +38,26 @@ def dashboard():
     GPIO.output(LED_PIN, GPIO.LOW)
     return render_template('index.html')
 
+@app.route('/led-state', methods=['GET'])
+def get_led_state():
+    global led_state  # Make sure you have a variable to track the LED state
+    return jsonify({'led_state': led_state})  # Return the current LED state
+
 # TODO: implement the logic for the led turning on
 @app.route('/toggle-led', methods=['POST'])
 def toggle_led():
-    # get current LED status
     global led_state
-
     data = request.get_json()
-    # parse json data
-    switch_state = data['state']  # Get the state value
+    led_state = data['state']  # Update the LED state based on the request
+    # Code to physically turn the LED on or off using GPIO
+    if led_state:
+        # Turn on the LED
+        GPIO.output(LED_PIN, GPIO.HIGH)  # Replace LED_PIN with your actual pin number
+    else:
+        # Turn off the LED
+        GPIO.output(LED_PIN, GPIO.LOW)  # Replace LED_PIN with your actual pin number
 
-    GPIO.output(LED_PIN, GPIO.HIGH if switch_state else GPIO.LOW)  # Toggle LED
-    led_state = switch_state  # Update led_state
-
-    return jsonify({'success': True, 'led_state': led_state})  # Indicate success and return current LED state
-
+    return jsonify({'status': 'success', 'led_state': led_state})
 
 # Toggling Fan
 @app.route('/toggle-fan', methods=['POST'])

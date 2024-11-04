@@ -29,8 +29,8 @@
         <p>Lights</p>      
         <img id="lightbulb" src="../static/lightoff.png" alt="Lightbulb Off" />
         <div class="switch">
-          <input type="checkbox" id="switchButton" onchange="toggleSwitch()" />
-          <label for="switchButton"></label>
+          <input type="checkbox" id="switchLED" onchange="toggleSwitch()" />
+          <label for="switchLED"></label>
         </div>
       </div>
 
@@ -39,8 +39,8 @@
         <p>Fan</p>      
         <img id="fan" src="../static/fanoff.png" alt="Fan Off" />
         <div class="switch">
-          <input type="checkbox" id="fanSwitchButton" onchange="toggleFan()" />
-          <label for="fanSwitchButton"></label>
+          <input type="checkbox" id="fanSwitch" onchange="toggleFan()" />
+          <label for="fanSwitch"></label>
         </div>
       </div>
 
@@ -103,6 +103,32 @@
           body: JSON.stringify({ state: fanSwitchState })
         });
       }
+
+      function updateFanState() {
+          fetch('/fan-state')
+	      .then(response => response.json())
+	      .then(data => {
+	          fanSwitchState = data.fan_state; // Update the fanSwitchState based on the server response
+	          const fanImage = document.getElementById('fan');
+      
+	          // Update fan image based on switch state
+	          if (fanSwitchState) {
+		      fanImage.src = '../static/fanon.png';
+		      fanSwitch.checked = true; // Set the checkbox to checked
+	          } else {
+		      fanImage.src = '../static/fanoff.png';
+		      fanSwitch.checked = false; // Set the checkbox to checked
+	          }
+	      })
+	      .catch(error => console.error('Error fetching fan state:', error));
+      }
+
+      // Call this function when the page loads to check the initial fan state
+      window.onload = function() {
+          updateFanState();
+      };
+      // Set an interval to update fan reading every 2 seconds
+      setInterval(updateFanState, 2000);
 
       // Initialize JustGage for Temperature and Humidity
       const temperatureGauge = new JustGage({

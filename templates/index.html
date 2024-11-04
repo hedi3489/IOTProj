@@ -104,6 +104,26 @@
         });
       }
 
+      function updateLEDState() {
+          fetch('/led-state')
+            .then(response => response.json())
+            .then(data => {
+                switchState = data.led_state; // Update the LED switch state based on the server response
+                const lightbulb = document.getElementById('lightbulb');
+
+                // Update lightbulb image based on switch state
+                if (switchState) {
+                    lightbulb.src = '../static/lighton.png';
+                    document.getElementById('switchLED').checked = true; // Set the checkbox to checked
+                } else {
+                    lightbulb.src = '../static/lightoff.png';
+                    switchLED.checked = false; // Set the checkbox to unchecked
+                }
+              })
+             .catch(error => console.error('Error fetching LED state:', error));
+      }
+
+
       function updateFanState() {
           fetch('/fan-state')
 	      .then(response => response.json())
@@ -126,9 +146,11 @@
       // Call this function when the page loads to check the initial fan state
       window.onload = function() {
           updateFanState();
+          updateLEDState();
       };
       // Set an interval to update fan reading every 2 seconds
       setInterval(updateFanState, 2000);
+      setInterval(updateLEDState, 2000);
 
       // Initialize JustGage for Temperature and Humidity
       const temperatureGauge = new JustGage({

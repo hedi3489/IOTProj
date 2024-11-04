@@ -86,16 +86,14 @@ def toggle_fan():
 
 
 # Data capture route for reading DHT11 sensor
+# Separate function for single sensor reading requested by the dashboard
 @app.route('/read-sensor', methods=['GET'])
-def read_sensor():
-    for i in range(15):
+def read_sensor_once():
+    for _ in range(15):  # Attempt to read sensor up to 15 times
         chk = dht_sensor.readDHT11()
         if chk == 0:
             humidity = dht_sensor.getHumidity()
             temperature = dht_sensor.getTemperature()
-            if temperature > 24:
-                send_email(temperature)
-
             return jsonify({'temperature': temperature, 'humidity': humidity})
         time.sleep(0.1)  # Short delay before retrying
 
@@ -200,10 +198,23 @@ def receive_emails():
 ############################################################################################
 
 # Function to read sensor and start a separate thread
+# Function for continuous sensor monitoring in a background thread
 def read_sensor_thread():
     while True:
-        read_sensor()
-        time.sleep(60)
+        for _ in range(15):  # Attempt to read sensor up to 15 times
+            chk = dht_sensor.readDHT11()
+            if chk == 0:
+                humidity = dht_sensor.getHumidity()
+                temperature = dht_sensor.getTemperature()
+
+                # Check temperature and send email alert if needed
+                if temperature > 24:
+                    send_email(temperature)
+                break
+            time.sleep(0.1)  # Short delay before retrying
+
+        time.sleep(60)  # Wait 1 minute before the next reading
+
 
 # Function to turn the motor ON
 def turn_motor_on():
@@ -227,7 +238,9 @@ def cleanup():
 
 if __name__ == "__main__":
     try:
+        # Start the background thread for continuous sensor monitoring
         threading.Thread(target=read_sensor_thread, daemon=True).start()
-        app.run(port=5001)
+        # Run the Flask app
+        app.run(host="0.0.0.0", port=5000)
     except KeyboardInterrupt:
         cleanup()

@@ -18,9 +18,19 @@ GPIO.setup(LED_PIN, GPIO.OUT)
 led_state = False
 GPIO.output(LED_PIN, GPIO.LOW)
 
+
 # DHT11 sensor setup
 DHT_PIN = 16
 dht_sensor = DHT(DHT_PIN)
+
+# Add a global variable to track the last email sent time
+last_email_sent_time = 0  # Timestamp of the last email sent
+email_cooldown = 5  # Cooldown period in seconds
+email_lock = threading.Lock()  # Lock to ensure thread safety
+last_brightness_state = False
+subject = ''
+body = ''
+
 
 # Motor setup
 ENA = 22  # Enable Pin
@@ -43,21 +53,46 @@ def get_led_state():
     global led_state  # Make sure you have a variable to track the LED state
     return jsonify({'led_state': led_state})  # Return the current LED state
 
-# TODO: implement the logic for the led turning on
+
 @app.route('/toggle-led', methods=['POST'])
 def toggle_led():
-    global led_state
+    global led_state, last_brightness_state, subject, body, last_email_sent_time
+
     data = request.get_json()
     led_state = data['state']  # Update the LED state based on the request
+
     # Code to physically turn the LED on or off using GPIO
-    if led_state:
+    if led_state and not last_brightness_state:
         # Turn on the LED
-        GPIO.output(LED_PIN, GPIO.HIGH)  # Replace LED_PIN with your actual pin number
-    else:
+        GPIO.output(LED_PIN, GPIO.HIGH)
+        subject = "Brightness"
+        body = "It's gotten dark. Lights are turned on."
+        send_email_with_cooldown(subject, body)  # Use cooldown-protected email sending
+        last_brightness_state = led_state  # Update the brightness state
+    elif not led_state and last_brightness_state:
         # Turn off the LED
-        GPIO.output(LED_PIN, GPIO.LOW)  # Replace LED_PIN with your actual pin number
+        GPIO.output(LED_PIN, GPIO.LOW)
+        subject = "Brightness"
+        body = "It's bright in here. Lights off."
+        send_email_with_cooldown(subject, body)  # Use cooldown-protected email sending
+        last_brightness_state = led_state  # Update the brightness state
 
     return jsonify({'status': 'success', 'led_state': led_state})
+
+def send_email_with_cooldown(subject, body):
+    """Send email only if cooldown period has elapsed."""
+    global last_email_sent_time
+
+    with email_lock:  # Ensure only one thread can send emails at a time
+        current_time = time.time()
+        if current_time - last_email_sent_time > email_cooldown:
+            # Cooldown has elapsed, send the email
+            send_email(subject, body, False)
+            last_email_sent_time = current_time  # Update the last email sent time
+            print(f"Email sent: {subject}")
+        else:
+            # Cooldown is still active
+            print(f"Email not sent due to cooldown. Time remaining: {email_cooldown - (current_time - last_email_sent_time):.2f} seconds")
 
 # Toggling Fan
 @app.route('/toggle-fan', methods=['POST'])
@@ -95,16 +130,23 @@ def read_sensor_once():
 
     return jsonify({'error': 'Failed to retrieve data from sensor'}), 500
 
+# Function to send email
+#def send_email(current_temp):
+ #   yag = yagmail.SMTP(user="belhassinehedi308@gmail.com", password="mdmk palo kswz vyvj")
+#
+ #   subject = "Temperature Alert"
+  #  body = f"The current temperature is {current_temp}. Would you like to turn on the fan?"
+   # yag.send(to="belhassinehedi308@gmail.com", subject=subject, contents=body)
+    #print("Sent!")
+    #receive_emails()
 
 # Function to send email
-def send_email(current_temp):
+def send_email(title, message, receive_needed):
     yag = yagmail.SMTP(user="belhassinehedi308@gmail.com", password="mdmk palo kswz vyvj")
-
-    subject = "Temperature Alert"
-    body = f"The current temperature is {current_temp}. Would you like to turn on the fan?"
     yag.send(to="belhassinehedi308@gmail.com", subject=subject, contents=body)
     print("Sent!")
-    receive_emails()
+    if (receive_needed):
+        receive_emails()
 
 def check_email_response():
     yag = yagmail.SMTP('belhassinehedi308@gmail.com', 'mdmk palo kswz vyvj')
@@ -116,9 +158,12 @@ def check_email_response():
 
             for email in inbox:
                 if 'Temperature Alert' in email.subject:
-                    if 'Y' in email.body:
-                        print("Y received")
+                    if 'Yes' in email.body:
+                        print("YES received")
                         turn_motor_on()
+                    elif 'No' in email.body:
+                        print("NO received")
+                        turn_motor_off()
                     return  # Exit after handling the response
         except Exception as e:
             print(f"Error checking email: {e}")

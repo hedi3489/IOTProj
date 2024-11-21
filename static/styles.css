@@ -4,15 +4,20 @@ body {
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background-color: #f4f4f4;
+    background-color: #050030;
     margin: 0px;
 }
 
 h1 {
-    background-color: #60b1dd;
+    background-color: #2782db;
     color: #fff;
     margin: 0px;
     padding: 30px 0px 30px 50px;
+}
+
+.dashboard-container {
+    display: flex;
+    margin: 20px; 
 }
 
 .dashboard {
@@ -69,5 +74,10 @@ h1 {
 
 #lightbulb {
     width: 100px;
+    height: 130px;
+}
+
+#fan {
+    width: 130px;
     height: 130px;
 }

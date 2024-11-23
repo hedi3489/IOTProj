@@ -1,3 +1,4 @@
 # ignoring my venv because its personal, every developper should create their own
 myenv/
 __pycache__/
+.vscode/

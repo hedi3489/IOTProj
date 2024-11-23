@@ -7,6 +7,7 @@ import imaplib
 import email
 from email.header import decode_header
 import threading
+from DatabaseHelper import DBHelper
 
 app = Flask(__name__)
 

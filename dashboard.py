@@ -8,6 +8,7 @@ import email
 from email.header import decode_header
 import threading
 from DatabaseHelper import DBHelper
+import requests
 
 app = Flask(__name__)
 
@@ -263,6 +264,16 @@ def turn_motor_off():
     global fan_state
     fan_state = False
     print("Fan is OFF")
+    
+@app.route('/devices', methods=['GET'])
+def get_devices():
+    try:
+        threshold = request.args.get('threshold', default=-100 ,type=int)
+        response = requests.get(f'http://localhost:3001/api/devices?threshold={threshold}')
+        devices = response.json()
+        return jsonify(devices)
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': 'Could not fetch devices'}), 500
 
 def cleanup():
     GPIO.cleanup()

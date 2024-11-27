@@ -1,43 +1,107 @@
+/* General Styling (Unchanged) */
 body {
     font-family: 'Orbitron', sans-serif;
+    background-color: #1a1a2e;
+    color: #ffffff;
+    margin: 0;
+    display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background-color: #050030;
-    margin: 0px;
+    min-height: 100vh;
 }
 
-h1 {
-    background-color: #2782db;
-    color: #fff;
-    margin: 0px;
-    padding: 30px 0px 30px 50px;
+/* User Panel */
+.user-panel {
+    display: flex;
+    justify-content: space-between;
+    width: 90%;
+    margin: 20px;
 }
 
+.welcome-card {
+    background: linear-gradient(135deg, #2782db, #1d4e89);
+    padding: 15px 20px;
+    border-radius: 15px;
+    box-shadow: 0 0 15px rgba(39, 130, 219, 0.5);
+    text-align: left;
+    flex: 1;
+}
+
+.account-info {
+    align-self: center;
+    font-size: 1.2em;
+}
+
+/* Dashboard Container with Grid Layout */
 .dashboard-container {
-    display: flex;
-    margin: 20px; 
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    width: 90%;
+    margin: 20px 0;
 }
 
-.dashboard {
-    width: 220px;
-    height: 240px;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    margin: 20px 0px 0px 20px;
+/* Floating animation */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+        /* Initial position */
+    }
+
+    50% {
+        transform: translateY(-10px);
+        /* Move slightly upward */
+    }
+}
+
+.futuristic-card {
+    position: relative;
+    overflow: hidden;
+    /* Ensure ripple effect stays within the card */
+    background: linear-gradient(135deg, #2e2e3d, #212135);
     padding: 20px;
-    border: 1px solid #ccc;
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.1);
+    text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s;
+    animation: float 3s ease-in-out infinite;
+    /* Apply the floating animation */
 }
 
-.switch {
-    margin: 10px;
+.futuristic-card:hover {
+    transform: translateY(-5px) scale(1.05);
+    /* Slightly scale up and float on hover */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.3);
 }
 
+.futuristic-card:active {
+    transform: scale(0.98);
+    /* Slightly shrink card on click */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+
+.futuristic-card.tall {
+    grid-row: span 2;
+    /* Takes up 2 rows */
+}
+
+.futuristic-card.wide {
+    grid-column: span 2;
+    /* Wide card */
+    grid-row: span 1;
+}
+
+/* Lights and Fan Widgets */
+#lightbulb,
+#fan {
+    width: 80px;
+    margin: 15px 0;
+}
+
+/* Switch Styles */
 .switch input {
     display: none;
 }
@@ -50,6 +114,7 @@ h1 {
     border-radius: 34px;
     position: relative;
     cursor: pointer;
+    transition: background 0.3s;
 }
 
 .switch label::after {
@@ -61,7 +126,7 @@ h1 {
     position: absolute;
     top: 4px;
     left: 4px;
-    transition: 0.3s;
+    transition: transform 0.3s;
 }
 
 .switch input:checked+label {
@@ -70,14 +135,4 @@ h1 {
 
 .switch input:checked+label::after {
     transform: translateX(26px);
-}
-
-#lightbulb {
-    width: 100px;
-    height: 130px;
-}
-
-#fan {
-    width: 130px;
-    height: 130px;
 }

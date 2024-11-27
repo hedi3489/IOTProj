@@ -1,76 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.2.9/justgage.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
-    
-    
     <script src="../static/scipt.js"></script>
     <script src="../static/mqttscript.js"></script>
-
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>IoT Dashboard</title>
-    <link rel="stylesheet" href="../static/styles.css">
-    <style>
-      #temperatureGauge, #humidityGauge {
-          width: 150px;
-          height: 150px;
-          margin: 0 auto;
-      }
-    </style>
+    <link rel="stylesheet" href="../static/styles.css" />
   </head>
-    <body>
-      <h1>IoT Dashboard</h1>
-
-      <div class="dashboard-container">
-
-
-        <!----------- Light Switch Widget ----------->
-        <div class="dashboard">
-          <p>Lights</p>      
-          <img id="lightbulb" src="../static/lightoff.png" alt="Lightbulb Off" />
-          <div class="switch">
-            <input type="checkbox" id="switchLED" onchange="toggleSwitch()" />
-            <label for="switchLED"></label>
-          </div>
+  <body>
+    <!-- User Panel -->
+    <div class="user-panel futuristic-card">
+      <div class="welcome-card">
+        <h2>Welcome, Admin!</h2>
+        <p>Stay updated with your IoT devices</p>
+        <div class="account-info">
+          <p>
+            Logged in as: <span>Admin</span>
+          </p>
         </div>
-
-
-        <!----------- Fan Switch Widget -----------> 
-        <div class="dashboard">
-          <p>Fan</p>      
-          <img id="fan" src="../static/fanoff.png" alt="Fan Off" />
-          <div class="switch">
-            <input type="checkbox" id="fanSwitch" onchange="toggleFan()" />
-            <label for="fanSwitch"></label>
-          </div>
-        </div>
-
-
-        <!----------- Temperature Gauge Widget ----------->
-        <div class="dashboard">
-          <p>Temperature</p>
-          <div id="temperatureGauge"></div>
-        </div>
-
-
-        <!----------- Humidity Gauge Widget ----------->
-        <div class="dashboard">
-          <p>Humidity</p>
-          <div id="humidityGauge"></div>
-        </div>
-
-        <!----------- Brightness Widget ----------->
-        <div class="dashboard">
-          <p>Room Brightness</p>
-          <p> <span id="brightness">--</span></p>
-        </div>
-      
       </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="dashboard-container">
+      <!-- Light Switch Widget -->
+      <div class="dashboard futuristic-card">
+        <p>Lights</p>
+        <img id="lightbulb" src="../static/lightoff.png" alt="Lightbulb Off" />
+        <div class="switch">
+          <input type="checkbox" id="switchLED" onchange="toggleSwitch()" />
+          <label for="switchLED"></label>
+        </div>
+      </div>
+
+      <!-- Fan Switch Widget -->
+      <div class="dashboard futuristic-card">
+        <p>Fan</p>
+        <img id="fan" src="../static/fanoff.png" alt="Fan Off" />
+        <div class="switch">
+          <input type="checkbox" id="fanSwitch" onchange="toggleFan()" />
+          <label for="fanSwitch"></label>
+        </div>
+      </div>
+
+      <!-- Temperature Gauge Widget -->
+      <div class="dashboard futuristic-card wide">
+        <p>Temperature</p>
+        <div id="temperatureGauge"></div>
+      </div>
+
+      <!-- Humidity Gauge Widget -->
+      <div class="dashboard futuristic-card wide">
+        <p>Humidity</p>
+        <div id="humidityGauge"></div>
+      </div>
+
+      <!-- Brightness Widget -->
+      <div class="dashboard futuristic-card">
+        <p>Room Brightness</p>
+        <p>
+          <span id="brightness">--</span>
+        </p>
+      </div>
+    </div>
   </body>
 </html>

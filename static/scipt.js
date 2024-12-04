@@ -142,3 +142,24 @@ function updateSensorData() {
 
 // Set an interval to update sensor data every 5 seconds
 setInterval(updateSensorData, 5000);
+
+function fetchDeviceCount(threshold) {
+    fetch(`/devices?threshold=${threshold}`)
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then((data) => {
+            if (data.error) {
+                document.getElementById('device-count').textContent = 'Error: ' + data.error;
+            } else {
+                document.getElementById('device-count').textContent = `Devices Found: ${data.count}`;
+            }
+        })
+        .catch((error) => {
+            console.error('Error fetching data:', error);
+            document.getElementById('device-count').textContent = 'Error fetching data';
+        });
+}

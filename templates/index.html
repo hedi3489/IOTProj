@@ -1,28 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
+    <link target=_blank href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.2.9/justgage.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
-    <script src="../static/scipt.js"></script>
-    <script src="../static/mqttscript.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js"></script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IoT Dashboard</title>
-    <link rel="stylesheet" href="../static/styles.css" />
+    <link rel="stylesheet" target=_blank href="../static/styles.css" />
   </head>
   <body>
     <!-- User Panel -->
-    <div class="user-panel futuristic-card">
+    <div class="user-panel-s futuristic-card">
       <div class="welcome-card">
         <h2>Welcome, Admin!</h2>
         <p>Stay updated with your IoT devices</p>
-        <div class="account-info">
-          <p>
-            Logged in as: <span>Admin</span>
-          </p>
-        </div>
+        
       </div>
     </div>
 
@@ -54,12 +50,23 @@
         <div id="temperatureGauge"></div>
       </div>
 
+      <!-- Bluetooth Widget -->
+      <div class="dashboard futuristic-card wide">
+        <p>Bluetooth Device Scanner</p>
+        <form id="rssi-form">
+          <label for="rssi-threshold">RSSI Threshold:</label>
+          <input type="number" id="rssi-threshold" name="rssi-threshold" placeholder="Enter RSSI Threshold" required />
+          <button type="button" onclick="fetchDeviceCount(document.getElementById('rssi-threshold').value)">Scan</button>
+        </form>
+        <p id="device-count">Devices Found:</p>
+      </div>
+
       <!-- Humidity Gauge Widget -->
       <div class="dashboard futuristic-card wide">
         <p>Humidity</p>
         <div id="humidityGauge"></div>
       </div>
-
+       
       <!-- Brightness Widget -->
       <div class="dashboard futuristic-card">
         <p>Room Brightness</p>
@@ -67,6 +74,31 @@
           <span id="brightness">--</span>
         </p>
       </div>
+
+      <div class="side-bar">
+        <!-- UID Widget -->
+        <div class="dashboard futuristic-card sideone">
+          <!-- Profile Icon -->
+          <div class="top">
+            <div class="profile-icon">
+              <img src="../static/generic.jpg" alt="Profile Picture" />
+            </div>
+          </div>
+          <h1>User</h1>
+          <p>
+            <span id="user">--</span>
+          </p>
+          <h1>Temperature Threshold</h1>
+          <p>
+            <span id="tempThreshold">24</span>
+          </p>
+          <h1>Light Threshold</h1>
+          <p>
+            <span id="lightThreshold">400</span>
+          </p>
+        </div>
     </div>
   </body>
+  <script src="../static/scipt.js"></script>
+  <script src="../static/mqttscript.js"></script>
 </html>

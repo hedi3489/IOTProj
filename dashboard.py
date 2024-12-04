@@ -7,171 +7,185 @@ import imaplib
 import email
 from email.header import decode_header
 import threading
-from DatabaseHelper import DBHelper
 import requests
+from DatabaseHelper import DBHelper
 
 app = Flask(__name__)
 
+# === GPIO Setup ===
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+
 # LED setup
 LED_PIN = 18
-GPIO.setmode(GPIO.BCM)
 GPIO.setup(LED_PIN, GPIO.OUT)
-# Initial LED state
 led_state = False
 GPIO.output(LED_PIN, GPIO.LOW)
 
-
 # DHT11 sensor setup
-DHT_PIN = 16
+DHT_PIN = 20
 dht_sensor = DHT(DHT_PIN)
+temperature_threshold = 24
 
-# Add a global variable to track the last email sent time
-last_email_sent_time = 0  # Timestamp of the last email sent
-email_cooldown = 5  # Cooldown period in seconds
-email_lock = threading.Lock()  # Lock to ensure thread safety
-last_brightness_state = False
-subject = ''
-body = ''
-
-
-# Motor setup
-ENA = 22  # Enable Pin
-IN1 = 27  # Input Pin
-IN2 = 17  # Input Pin
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+# Motor (fan) setup
+ENA = 22
+IN1 = 27
+IN2 = 17
 GPIO.setup(ENA, GPIO.OUT)
 GPIO.setup(IN1, GPIO.OUT)
 GPIO.setup(IN2, GPIO.OUT)
-fan_state = False  # Initial fan state
+fan_state = False
+
+# === Global Variables ===
+last_email_sent_time = 0
+email_cooldown = 5  # Cooldown period in seconds
+email_lock = threading.Lock()
+last_brightness_state = False
+subject = ''
+body = ''
+db_helper = DBHelper('users.db')
+
+# === Routes ===
+
+@app.route('/get_user_data', methods=['POST'])
+def get_user_data():
+    rfid_uid = request.json.get('rfid_uid')  # Get the UID from the request body
+    global temperature_threshold
+    if not rfid_uid:
+        return jsonify({"error": "Missing RFID UID"}), 400
+    
+    user_record = db_helper.fetch_by_rfid(rfid_uid)
+    if user_record:
+        # Structure the data as a JSON object
+        user_data = {
+            "rfid_id": user_record[0],
+            "temperature_threshold": user_record[1],
+            "light_intensity_threshold": user_record[2]
+        }
+        temperature_threshold = int(user_record[1])
+        if temperature_threshold < 24 :
+            print(temperature_threshold)
+            send_email_with_cooldown("Someone's home", "Hedi just came home. Adjusting thresholds.")
+        elif  temperature_threshold > 24 :
+            send_email_with_cooldown("Someone's home", "Youssef just came home. Adjusting thresholds.")
+        return jsonify(user_data), 200
+    else:
+        return jsonify({"error": "RFID not found"}), 404
+
 
 @app.route('/')
 def dashboard():
+    """Serve the dashboard."""
     GPIO.output(LED_PIN, GPIO.LOW)
     return render_template('index.html')
 
 @app.route('/led-state', methods=['GET'])
 def get_led_state():
-    global led_state  # Make sure you have a variable to track the LED state
-    return jsonify({'led_state': led_state})  # Return the current LED state
-
+    """Return the current LED state."""
+    return jsonify({'led_state': led_state})
 
 @app.route('/toggle-led', methods=['POST'])
 def toggle_led():
-    global led_state, last_brightness_state, subject, body, last_email_sent_time
+    """Toggle the LED state and send email notifications with cooldown."""
+    global led_state, last_brightness_state
 
     data = request.get_json()
-    led_state = data['state']  # Update the LED state based on the request
+    led_state = data['state']
 
-    # Code to physically turn the LED on or off using GPIO
     if led_state and not last_brightness_state:
-        # Turn on the LED
         GPIO.output(LED_PIN, GPIO.HIGH)
-        subject = "Brightness"
-        body = "It's gotten dark. Lights are turned on."
-        send_email_with_cooldown(subject, body)  # Use cooldown-protected email sending
-        last_brightness_state = led_state  # Update the brightness state
+        send_email_with_cooldown("Brightness", "It's gotten dark. Lights are turned on.")
+        last_brightness_state = led_state
     elif not led_state and last_brightness_state:
-        # Turn off the LED
         GPIO.output(LED_PIN, GPIO.LOW)
-        subject = "Brightness"
-        body = "It's bright in here. Lights off."
-        send_email_with_cooldown(subject, body)  # Use cooldown-protected email sending
-        last_brightness_state = led_state  # Update the brightness state
+        send_email_with_cooldown("Brightness", "It's bright in here. Lights off.")
+        last_brightness_state = led_state
 
     return jsonify({'status': 'success', 'led_state': led_state})
 
-def send_email_with_cooldown(subject, body):
-    """Send email only if cooldown period has elapsed."""
-    global last_email_sent_time
-
-    with email_lock:  # Ensure only one thread can send emails at a time
-        current_time = time.time()
-        if current_time - last_email_sent_time > email_cooldown:
-            # Cooldown has elapsed, send the email
-            send_email(subject, body, False)
-            last_email_sent_time = current_time  # Update the last email sent time
-            print(f"Email sent: {subject}")
-        else:
-            # Cooldown is still active
-            print(f"Email not sent due to cooldown. Time remaining: {email_cooldown - (current_time - last_email_sent_time):.2f} seconds")
-
-# Toggling Fan
 @app.route('/toggle-fan', methods=['POST'])
 def toggle_fan():
-    # fan control
+    """Toggle the fan state."""
     global fan_state
 
     data = request.get_json()
-    # Parse JSON data
-    switch_state = data['state']  # Get the state value
+    fan_state = data['state']
 
-    if switch_state:
-        turn_motor_on()  # Turn on fan
+    if fan_state:
+        turn_motor_on()
     else:
-        turn_motor_off()  # Turn off fan
+        turn_motor_off()
 
-    fan_state = switch_state  # Update fan_state
-    return jsonify({'success': True, 'fan_state': fan_state})  # Indicate success and return current fan state
-
+    return jsonify({'success': True, 'fan_state': fan_state})
 
 @app.route('/fan-state', methods=['GET'])
 def get_fan_state():
-    global fan_state
-    return jsonify({'fan_state': fan_state})  # Return the current fan state
+    """Return the current fan state."""
+    return jsonify({'fan_state': fan_state})
 
-# Data capture route for reading DHT11 sensor
 @app.route('/read-sensor', methods=['GET'])
 def read_sensor_once():
-    for _ in range(15):  # Attempt to read sensor up to 15 times
-        if dht_sensor.readDHT11() == 0:  # Only proceed if read is successful
-            humidity = dht_sensor.getHumidity()
-            temperature = dht_sensor.getTemperature()
-            return jsonify({'temperature': temperature, 'humidity': humidity})
-        time.sleep(0.1)  # Short delay before retrying
+    """Read temperature and humidity data from the sensor."""
+    for _ in range(15):
+        if dht_sensor.readDHT11() == 0:
+            return jsonify({'temperature': dht_sensor.getTemperature(), 'humidity': dht_sensor.getHumidity()})
+        time.sleep(0.1)
 
     return jsonify({'error': 'Failed to retrieve data from sensor'}), 500
 
-# Function to send email
-#def send_email(current_temp):
- #   yag = yagmail.SMTP(user="belhassinehedi308@gmail.com", password="mdmk palo kswz vyvj")
-#
- #   subject = "Temperature Alert"
-  #  body = f"The current temperature is {current_temp}. Would you like to turn on the fan?"
-   # yag.send(to="belhassinehedi308@gmail.com", subject=subject, contents=body)
-    #print("Sent!")
-    #receive_emails()
+@app.route('/devices', methods=['GET'])
+def get_devices():
+    """Fetch device information from a remote API."""
+    try:
+        threshold = request.args.get('threshold', default=-100, type=int)
+        response = requests.get(f'http://localhost:3001/api/devices?threshold={threshold}')
+        return jsonify(response.json())
+    except requests.exceptions.RequestException:
+        return jsonify({'error': 'Could not fetch devices'}), 500
 
-# Function to send email
-def send_email(title, message, receive_needed):
-    yag = yagmail.SMTP(user="belhassinehedi308@gmail.com", password="mdmk palo kswz vyvj")
-    yag.send(to="belhassinehedi308@gmail.com", subject=subject, contents=body)
-    print("Sent!")
-    if (receive_needed):
-        receive_emails()
+@app.route('/mqtt-data', methods=['POST'])
+def handle_mqtt_data():
+    try:
+        data = request.get_json()
+        topic = data['topic']
+        rfid_id = data['payload']
+
+        # Use your database library to store the data
+        if (db_helper.fetch_by_rfid(rfid_id)):
+            print('row exists')
+
+        return jsonify({'status': 'success', 'message': 'Data saved successfully'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# === Helper Functions ===
+def send_email_with_cooldown(subject, body):
+    """Send an email with a cooldown to prevent spam."""
+    global last_email_sent_time
+
+    with email_lock:
+        current_time = time.time()
+        if current_time - last_email_sent_time > email_cooldown:
+            send_email(subject, body, receive_needed=False)
+            last_email_sent_time = current_time
+            print(f"Email sent: {subject}")
+        else:
+            print(f"Email not sent due to cooldown. Time remaining: {email_cooldown - (current_time - last_email_sent_time):.2f} seconds")
+
+def send_email(subject, body, receive_needed):
+    """Send an email and optionally check for responses."""
+    try:
+        yag = yagmail.SMTP(user="belhassinehedi308@gmail.com", password="mdmk palo kswz vyvj")
+        yag.send(to="belhassinehedi308@gmail.com", subject=subject, contents=body)
+        print("Email sent!")
+        if receive_needed:
+            check_email_response()
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 
 def check_email_response():
-    yag = yagmail.SMTP('belhassinehedi308@gmail.com', 'mdmk palo kswz vyvj')
-
-    while True:
-        time.sleep(60)  # Check every minute
-        try:
-            inbox = yag.get_inbox(search_expression='UNSEEN')  # Fetch unread emails
-
-            for email in inbox:
-                if 'Temperature Alert' in email.subject:
-                    if 'Yes' in email.body:
-                        print("YES received")
-                        turn_motor_on()
-                    elif 'No' in email.body:
-                        print("NO received")
-                        turn_motor_off()
-                    return  # Exit after handling the response
-        except Exception as e:
-            print(f"Error checking email: {e}")
-
-
-def receive_emails():
+    """Check email responses to control the fan."""
     # Email configuration
     SRVR = 'imap.gmail.com'
     PORT = 993
@@ -231,59 +245,51 @@ def receive_emails():
         finally:
             mail.logout()  # Logout and close the connection
 
-# Function to read sensor and start a separate thread
-def read_sensor_thread():
-    while True:
-        for _ in range(15):  # Attempt to read sensor up to 15 times
-            if dht_sensor.readDHT11() == 0:  # Only proceed if read is successful
-                humidity = dht_sensor.getHumidity()
-                temperature = dht_sensor.getTemperature()
-
-                # Check temperature and send email alert if needed
-                if temperature > 24:
-                    send_email(temperature)
-                break
-            time.sleep(0.1)  # Short delay before retrying
-
-        time.sleep(60)  # Wait 1 minute before the next reading
-
-# Function to turn the motor ON
 def turn_motor_on():
-    GPIO.output(ENA, GPIO.HIGH)  # Enable the motor
-    GPIO.output(IN1, GPIO.LOW)   # Set direction
-    GPIO.output(IN2, GPIO.HIGH)  # Set direction
+    """Turn the motor on."""
+    GPIO.output(ENA, GPIO.HIGH)
+    GPIO.output(IN1, GPIO.LOW)
+    GPIO.output(IN2, GPIO.HIGH)
     global fan_state
     fan_state = True
     print("Fan is ON")
 
-# Function to turn the motor OFF
 def turn_motor_off():
-    GPIO.output(ENA, GPIO.LOW)   # Disable the motor
-    GPIO.output(IN1, GPIO.HIGH)  # Set to stop
-    GPIO.output(IN2, GPIO.LOW)   # Set to stop
+    """Turn the motor off."""
+    GPIO.output(ENA, GPIO.LOW)
+    GPIO.output(IN1, GPIO.HIGH)
+    GPIO.output(IN2, GPIO.LOW)
     global fan_state
     fan_state = False
     print("Fan is OFF")
-    
-@app.route('/devices', methods=['GET'])
-def get_devices():
-    try:
-        threshold = request.args.get('threshold', default=-100 ,type=int)
-        response = requests.get(f'http://localhost:3001/api/devices?threshold={threshold}')
-        devices = response.json()
-        return jsonify(devices)
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': 'Could not fetch devices'}), 500
 
+# === Background Threads ===
+def read_sensor_thread():
+    print("reading temp")
+    global temperature_threshold
+    """Continuously monitor the sensor and send alerts."""
+    while True:
+        for _ in range(15):
+            if dht_sensor.readDHT11() == 0:
+                temp = dht_sensor.getTemperature()
+                time.sleep(5)
+                print(temperature_threshold)
+                if temp >= temperature_threshold:
+                    send_email("Temperature Alert", f"The current temperature is {temp}. Would you like to turn on the fan?", receive_needed=True)
+                break
+            time.sleep(0.1)
+        time.sleep(60)
+
+# === Cleanup ===
 def cleanup():
+    """Cleanup GPIO resources on exit."""
     GPIO.cleanup()
     print("GPIO cleanup done")
 
+# === Main Entry Point ===
 if __name__ == "__main__":
     try:
-        # Start the background thread for continuous sensor monitoring
         threading.Thread(target=read_sensor_thread, daemon=True).start()
-        # Run the Flask app
         app.run(host="0.0.0.0", port=5000)
     except KeyboardInterrupt:
         cleanup()
